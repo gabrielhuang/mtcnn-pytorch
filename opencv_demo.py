@@ -3,18 +3,47 @@ from PIL import Image
 import cv2
 import numpy as np
 from time import time
+import argparse
 
-video = cv2.VideoCapture(0)
+parser = argparse.ArgumentParser('Face Detector')
+parser.add_argument('--video', default='webcam', help='video to analyze')
+parser.add_argument('--skip', type=int, default=1, help='frames to skip (1 means no skip)')
+parser.add_argument('--width', type=int, default=0, help='resize width')
 
+args = parser.parse_args()
 
+if args.video != 'webcam':
+    video = cv2.VideoCapture(args.video)
+else:
+    video = cv2.VideoCapture(0) 
+
+frame_idx = 0
 while True:
+    # Get frame
     ret, bgr_frame = video.read()
-    show_image = bgr_frame.copy()
     if not ret:
+        print 'Could not open video'
         break
+    print 'Shape', bgr_frame.shape
+
+    # Skip frames
+    frame_idx += 1
+    if frame_idx % args.skip != 0:
+        print 'Skipping frame'
+        continue
+
+    # Resize?
+    if args.width:
+        height = bgr_frame.shape[0] * args.width / bgr_frame.shape[1]
+        bgr_frame = cv2.resize(bgr_frame, (args.width, height))
+
+    show_image = bgr_frame.copy()
+    
+    # Convert data
     rgb_frame = cv2.cvtColor(bgr_frame,cv2.COLOR_BGR2RGB)
     pil_frame = Image.fromarray(rgb_frame)
-    #pil_frame = Image.open('people.jpg')
+
+    # Actual detection
     last = time()
     bounding_boxes, landmarks = detect_faces(pil_frame)
     dt = time() - last
