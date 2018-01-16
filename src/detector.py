@@ -6,6 +6,19 @@ from .box_utils import nms, calibrate_box, get_image_boxes, convert_to_square
 from .first_stage import run_first_stage
 
 
+def return_empty():
+    '''
+    Workaround for error 
+        RuntimeError: the given numpy array has zero-sized dimensions. Zero-sized dimensions are not supported in PyTorch
+
+    This error arises when no proposal are given by get_image_boxes,
+    and one attempts to convert the resulting img_boxes to torch.FloatTensor
+    '''
+    bounding_boxes = np.zeros((0, 5))
+    landmarks = np.zeros((0, 10))
+    return bounding_boxes, landmarks
+
+
 def detect_faces(image, min_face_size=20.0,
                  thresholds=[0.6, 0.7, 0.8],
                  nms_thresholds=[0.7, 0.7, 0.7]):
@@ -61,6 +74,8 @@ def detect_faces(image, min_face_size=20.0,
 
     # collect boxes (and offsets, and scores) from different scales
     bounding_boxes = [i for i in bounding_boxes if i is not None]
+    if len(bounding_boxes) == 0:
+        return return_empty()
     bounding_boxes = np.vstack(bounding_boxes)
 
     keep = nms(bounding_boxes[:, 0:5], nms_thresholds[0])
@@ -76,6 +91,9 @@ def detect_faces(image, min_face_size=20.0,
     # STAGE 2
 
     img_boxes = get_image_boxes(bounding_boxes, image, size=24)
+    if len(img_boxes) == 0:
+        return return_empty()
+
     img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
     output = rnet(img_boxes)
     offsets = output[0].data.numpy()  # shape [n_boxes, 4]
@@ -95,6 +113,9 @@ def detect_faces(image, min_face_size=20.0,
     # STAGE 3
 
     img_boxes = get_image_boxes(bounding_boxes, image, size=48)
+    if len(img_boxes) == 0:
+        return return_empty()
+
     img_boxes = Variable(torch.FloatTensor(img_boxes), volatile=True)
     output = onet(img_boxes)
     landmarks = output[0].data.numpy()  # shape [n_boxes, 10]
