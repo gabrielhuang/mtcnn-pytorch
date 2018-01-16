@@ -21,8 +21,16 @@ while True:
     print 'Detection {:.2}s or {:.2} fps'.format(dt, 1./dt)
     print bounding_boxes
 
+    # Draw bounding box
     for (x1, y1, x2, y2, confidence) in bounding_boxes.astype(int):
         cv2.rectangle(show_image, (x1, y1), (x2, y2), (255, 255, 255))
+    # Draw landmarks
+    for person in landmarks.astype(int):
+        for landmark_idx in xrange(5):
+            x = person[landmark_idx]
+            y = person[landmark_idx + 5]
+            print x,y
+            cv2.circle(show_image, (x, y), 3, (255, 0, 255))
 
     cv2.imshow('detected_faces', show_image)
     if cv2.waitKey(100) == ord(' '):
